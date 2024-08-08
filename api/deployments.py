@@ -1,12 +1,13 @@
 import json
 
 from flask_smorest import Blueprint, abort
-from flask import jsonify
+from flask import jsonify, request
 from marshmallow import ValidationError
 
 from api.deployments_statics import DeploymentStatics
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
-    DeployEnvironmentSchema
+    DeployEnvironmentSchema, CreateConfigurationTemplateSchema
+from marshmallow import Schema, fields, validate
 from deployment_manager import DeploymentManager
 from elasticbeanstalk_manager import ElasticBeanstalkManager
 
@@ -41,17 +42,51 @@ def deploy_environment(args):
 def create_environment(args):
     """Endpoint to create an environment"""
     try:
-        req = CreateEnvironmentSchema(**args)
         response = ElasticBeanstalkManager().create_environment(
-            environment_name=req.environment_name,
-            description=req.description,
-            application_name=req.application_name,
-            environment_variables=req.environment_variables,
+            environment_name=args.get("environment_name", None),
+            description=args.get("description", None),
+            stack_name=args.get("stack_name", None),
+            template_name=args.get("template_name", None),
+            application_name=args.get("application_name", None),
+            environment_variables=args.get("environment_variables", None),
             tags=[],
-            environment_tier='WebServer'
         )
         return jsonify(response), 201
     except Exception as e:
+        return abort(500, message=str(e))
+
+
+@deployments_bp.route('/environments', methods=['DELETE'])
+def terminate_environment():
+    """Endpoint to terminate an environment"""
+    try:
+        env_name = request.args.get('name')
+        print(f"terminating environment {env_name}")
+        if not env_name or env_name == "":
+            print("environment name is required")
+            return abort(400, message="Environment name is required")
+        response = ElasticBeanstalkManager().terminate_environment(
+            environment_name=env_name,
+        )
+        print(f"response: {response}")
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error terminating environment {e}")
+        return abort(500, message=str(e))
+
+
+@deployments_bp.route('/environments/configuration_template', methods=['POST'])
+@deployments_bp.arguments(CreateConfigurationTemplateSchema)
+def create_environment(args):
+    """Endpoint to create configuration template"""
+    try:
+        print("handling create configuration template")
+        response = ElasticBeanstalkManager().create_configuration_template(
+            application_name=args["application_name"],
+        )
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error creating configuration template {e}")
         return abort(500, message=str(e))
 
 
