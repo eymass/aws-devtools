@@ -60,15 +60,15 @@ class ElasticBeanstalkManager:
                 print(f"[{self.role}] Using version label: {version_label}")
                 args['VersionLabel'] = version_label
 
-            if template_name is None:
-                if stack_name is None:
-                    raise ValueError(f"[{self.role}] Stack name or template name is required")
+            if stack_name is None:
+                if template_name is None:
+                    args['TemplateName'] = "template-" + application_name
                 else:
                     print(f"[{self.role}] Using stack name: {stack_name}")
-                    args['SolutionStackName'] = stack_name
+                    args['TemplateName'] = template_name
             else:
                 print(f"[{self.role}] Using template name: {template_name}")
-                args['TemplateName'] = template_name
+                args['SolutionStackName'] = stack_name
 
             return self.client.create_environment(**args)
         except Exception as e:
