@@ -10,6 +10,7 @@ from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEn
 from marshmallow import Schema, fields, validate
 from deployment_manager import DeploymentManager
 from elasticbeanstalk_manager import ElasticBeanstalkManager
+from route53_manager import Route53Manager
 
 deployments_bp = Blueprint('deployments', __name__)
 
@@ -72,6 +73,26 @@ def terminate_environment():
         return jsonify(response), 201
     except Exception as e:
         print(f"error terminating environment {e}")
+        return abort(500, message=str(e))
+
+
+@deployments_bp.route('/domains/availability', methods=['GET'])
+def check_domain_availability():
+    """Endpoint to terminate an environment"""
+    try:
+        domain_name = request.args.get('domain')
+        print(f"checking domain availability domain_name=[{domain_name}]")
+        if not domain_name or domain_name == "":
+            msg = "domain_name name is required"
+            print(msg)
+            return abort(400, message=msg)
+        response = Route53Manager().is_domain_available(
+            domain_name=domain_name,
+        )
+        print(f"response: {response}")
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error checking domain availability {e}")
         return abort(500, message=str(e))
 
 
