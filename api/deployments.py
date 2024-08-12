@@ -6,7 +6,7 @@ from marshmallow import ValidationError
 
 from api.deployments_statics import DeploymentStatics
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
-    DeployEnvironmentSchema, CreateConfigurationTemplateSchema
+    DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema
 from marshmallow import Schema, fields, validate
 from deployment_manager import DeploymentManager
 from elasticbeanstalk_manager import ElasticBeanstalkManager
@@ -111,6 +111,21 @@ def create_environment(args):
         return abort(500, message=str(e))
 
 
+@deployments_bp.route('/environments/restart', methods=['POST'])
+@deployments_bp.arguments(RestartSchema)
+def restart_environment(args):
+    """Endpoint to create configuration template"""
+    try:
+        print("handling create configuration template")
+        response = ElasticBeanstalkManager().restart_environment(
+            environment_name=args["environment_name"],
+        )
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error creating configuration template {e}")
+        return abort(500, message=str(e))
+
+
 @deployments_bp.route('/environments/status', methods=['GET'])
 @deployments_bp.arguments(GetEnvironmentStatusSchema, location="query")
 def get_environment_status(args):
@@ -123,6 +138,23 @@ def get_environment_status(args):
         if config is None:
             return abort(404, description="Environment not found")
         return jsonify(config), 200
+    except Exception as e:
+        return abort(500, description=str(e))
+
+
+@deployments_bp.route('/environments/health', methods=['GET'])
+@deployments_bp.arguments(GetEnvironmentStatusSchema, location="query")
+def get_environment_health(args):
+    """Endpoint to get environment health"""
+    try:
+        req = GetEnvironmentStatusSchema().load(args)
+        health = ElasticBeanstalkManager().describe_environment_health(
+            environment_name=req['environment_name']
+        )
+        logs = ElasticBeanstalkManager().retrieve_environment_logs(
+            environment_name=req['environment_name']
+        )
+        return jsonify({health: health, logs: logs}), 200
     except Exception as e:
         return abort(500, description=str(e))
 

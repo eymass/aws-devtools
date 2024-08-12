@@ -171,3 +171,37 @@ class ElasticBeanstalkManager:
     def list_environments(self):
         return self.client.describe_environments()
 
+    def restart_environment(self, environment_name: str):
+        try:
+            response = self.client.restart_app_server(
+                EnvironmentName=environment_name
+            )
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+
+    def retrieve_environment_logs(self, environment_name: str):
+        try:
+            print(f"[{self.role}] Retrieving environment logs for {environment_name}")
+            response = self.client.request_environment_info(
+                EnvironmentName=environment_name,
+                InfoType='tail'
+            )
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+
+    def describe_environment_health(self, environment_name: str):
+        try:
+            response = self.client.describe_events(
+                EnvironmentName=environment_name,
+                MaxRecords=200,
+                Severity='WARN'
+            )
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+

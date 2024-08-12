@@ -18,6 +18,10 @@ class CreateConfigurationTemplateSchema(Schema):
     application_name = fields.Str(required=True)
 
 
+class RestartSchema(Schema):
+    environment_name = fields.Str(required=True)
+
+
 class DeployEnvironmentSchema(Schema):
     domain_name = fields.Str(required=True)
     contact_info = fields.Str(required=True)
