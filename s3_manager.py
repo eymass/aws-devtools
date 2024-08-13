@@ -17,7 +17,7 @@ class S3Manager:
                 print(msg)
                 raise AlreadyExists(msg)
         print(f"Creating bucket {bucket_name}")
-        result = self.s3.create_bucket(Bucket=bucket_name, ACL='public-read')
+        result = self.s3.create_bucket(Bucket=bucket_name)
         print(result)
         print(f"Enabling public access block for bucket {bucket_name}")
         response = self.s3.put_public_access_block(

@@ -2,6 +2,8 @@ from flask import request
 from flask_smorest import Blueprint, abort
 from flask import jsonify
 from marshmallow import ValidationError
+
+from exceptions.already_exists_exceptions import AlreadyExists
 from .schemas.create_bucket_schema import CreateBucketSchema
 from s3_manager import S3Manager
 
@@ -10,13 +12,17 @@ buckets_bp = Blueprint('buckets', __name__)
 
 @buckets_bp.route('/', methods=['POST'])
 @buckets_bp.arguments(CreateBucketSchema)
-def create_bucket():
+def handle_create_bucket(args):
     """Endpoint to create a new bucket"""
     try:
-        result = S3Manager().create_bucket(bucket_name=request.json['name'])
+        result = S3Manager().create_bucket(bucket_name=args['name'])
         print(result)
         return jsonify(result), 201
+    except AlreadyExists as e:
+        print(e)
+        return abort(409, message=str(e))
     except Exception as e:
+        print(e)
         return abort(500, message=str(e))
 
 

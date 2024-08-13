@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 class Route53Manager:
     def __init__(self):
         self.client = boto3.client('route53')
+        self.domains_client = boto3.client('route53domains')
 
     def remove_hosted_zone_by_domain(self, domain_name):
         try:
@@ -103,9 +104,9 @@ class Route53Manager:
     def is_domain_available(self, domain_name):
         # 'AVAILABLE'|'AVAILABLE_RESERVED'|'AVAILABLE_PREORDER'|'UNAVAILABLE'|'UNAVAILABLE_PREMIUM'|'UNAVAILABLE_RESTRICTED'|'RESERVED'|'DONT_KNOW'|'INVALID_NAME_FOR_TLD'|'PENDING'
         try:
-            response = self.client.check_domain_availability(DomainName=domain_name)
+            response = self.domains_client.check_domain_availability(DomainName=domain_name)
             print(f"Domain {domain_name} availability: {response['Availability']}")
             return response
         except ClientError as e:
             print(f"An error occurred: {e}")
-            return False
+            raise e

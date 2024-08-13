@@ -5,6 +5,7 @@ from flask import jsonify, request
 from marshmallow import ValidationError
 
 from api.deployments_statics import DeploymentStatics
+
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
     DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema
 from marshmallow import Schema, fields, validate
@@ -20,8 +21,9 @@ deployments_bp = Blueprint('deployments', __name__)
 def deploy_environment(args):
     """Endpoint to deploy an environment"""
     try:
-        req = DeployEnvironmentSchema(**args)
+        req = DeployEnvironmentSchema().load(data=args)
         deployment_manager = DeploymentManager()
+        print(f"deploying environment {req.environment_url} with domain {req.domain_name} and static files bucket {req.static_files_bucket}")
         origins = DeploymentStatics.get_origins(static_files_bucket=req.static_files_bucket,
                                                 environment_url=req.environment_url)
         default_cache_behavior = DeploymentStatics.get_default_cache_behavior(environment_url=req.environment_url)
@@ -33,8 +35,10 @@ def deploy_environment(args):
                                          default_cache_behavior=default_cache_behavior,
                                          cache_behaviors=cache_behavior,
                                          purchase_domain=True)
+        print("Deployment successful")
         return jsonify({"message": "Deployment successful"}), 201
     except Exception as e:
+        print(f"error deploying environment {e}")
         return abort(500, message=str(e))
 
 
