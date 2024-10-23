@@ -101,12 +101,24 @@ class Route53Manager:
             print(f"An error occurred: {e}")
             return None
 
-    def is_domain_available(self, domain_name):
+    def is_domain_available(self, domain_name) -> dict:
         # 'AVAILABLE'|'AVAILABLE_RESERVED'|'AVAILABLE_PREORDER'|'UNAVAILABLE'|'UNAVAILABLE_PREMIUM'|'UNAVAILABLE_RESTRICTED'|'RESERVED'|'DONT_KNOW'|'INVALID_NAME_FOR_TLD'|'PENDING'
         try:
             response = self.domains_client.check_domain_availability(DomainName=domain_name)
             print(f"Domain {domain_name} availability: {response['Availability']}")
             return response
         except ClientError as e:
+            print(f"An error occurred: {e}")
+            raise e
+
+    def is_domain_owned(self, domain_name) -> dict:
+        try:
+            response = self.domains_client.get_domain_detail(DomainName=domain_name)
+            print(f"Domain {domain_name} is owned by {response['AdminContact']['Email']}")
+            return {"Owned": True}
+        except ClientError as e:
+            print(f"Domain {domain_name} is not owned by the caller.")
+            return {"Owned": False}
+        except Exception as e:
             print(f"An error occurred: {e}")
             raise e

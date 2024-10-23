@@ -34,21 +34,27 @@ def test_list_environments_success(app):
     assert 'errors' not in response.json
 
 
+def test_list_cloudfronts_success(app):
+    response = app.test_client().get(DEPLOYMENTS_ROUTE+"cloudfronts/list"+"?region=us-east-1")
+    assert response.status_code == 201
+    assert 'errors' not in response.json
+
+
 def test_check_domain_availability_success(app):
     domain_name = "test.com"
     request = {
         "domain": domain_name
     }
-    response = app.test_client().get(DEPLOYMENTS_ROUTE+"environments/check_domain_availability",
+    response = app.test_client().get(DEPLOYMENTS_ROUTE+"domains/availability",
                                     query_string=request)
     assert response.status_code == 201
     assert 'errors' not in response.json
-    assert 'Available' in response.json
-    assert response.json['Available'] == True
+    assert 'Availability' in response.json
+    assert response.json['Availability'] == 'UNAVAILABLE'
 
 
 def test_get_environment_status_success(app):
-    env_name = "apprca"
+    env_name = "global-web3-sa-pens1"
     request = {
         "environment_name": env_name
     }

@@ -15,7 +15,7 @@ class DeploymentManager:
         self.route53_manager = Route53Manager()
         self.cloudfront_manager = CloudFrontManager()
 
-    def purchase_domain(self, domain_name, contact_info):
+    def purchase_domain(self, domain_name: str, contact_info: dict):
         # Step 1: Purchase domain
         operation_id = self.domain_manager.purchase_domain(domain_name, contact_info)
         print(f"Domain {domain_name} purchase initiated with operation ID: {operation_id}")
@@ -39,10 +39,12 @@ class DeploymentManager:
             time.sleep(30)
         return
 
-    def deploy_domain(self, domain_name, contact_info, origins,
+    def deploy_domain(self, domain_name: str, contact_info: dict, origins,
                       default_cache_behavior, cache_behaviors, purchase_domain):
         try:
             if purchase_domain:
+                # blocking call
+                # TODO switch to job
                 self.purchase_domain(domain_name, contact_info)
 
             # Step 2: Create certificate for the domain
@@ -91,5 +93,7 @@ class DeploymentManager:
                 f"pointing to {distribution_domain_name}")
 
             print("Deployment successful!")
+            return {"hosted_zone_id": hosted_zone_id, "distribution_id": distribution_id, "domain_name": domain_name,
+                    "distribution_domain_name": distribution_domain_name}
         except ClientError as e:
             print(f"An error occurred during deployment: {e}")

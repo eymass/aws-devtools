@@ -80,7 +80,7 @@ class DeploymentStatics:
                     'Quantity': 0
                 },
                 'FieldLevelEncryptionId': '',
-                'CachePolicyId': 'CachePolicyId'
+                'CachePolicyId': '658327ea-f89d-4fab-a63d-7e88639e58f6' # TODO predefine cache policy ids
             }
         ]
     }
@@ -122,6 +122,6 @@ class DeploymentStatics:
             'Quantity': 0
         },
         'FieldLevelEncryptionId': '',
-        'CachePolicyId': '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
-        'OriginRequestPolicyId': '216adef6-5c7f-47e4-b989-5492eafa07d3'
+        'CachePolicyId': '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', # TODO predefine cache policy ids
+        'OriginRequestPolicyId': '216adef6-5c7f-47e4-b989-5492eafa07d3' # TODO predefine cache policy ids
     }

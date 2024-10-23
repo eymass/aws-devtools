@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, post_load
 
 
 class CreateEnvironmentSchema(Schema):
@@ -11,7 +11,7 @@ class CreateEnvironmentSchema(Schema):
 
 
 class GetEnvironmentStatusSchema(Schema):
-    environment_name = fields.Str(required=True)
+    environment_name = fields.Str(required=False)
 
 
 class CreateConfigurationTemplateSchema(Schema):
@@ -24,6 +24,7 @@ class RestartSchema(Schema):
 
 class DeployEnvironmentSchema(Schema):
     domain_name = fields.Str(required=True)
-    contact_info = fields.Str(required=True)
+    contact_info = fields.Dict(required=True)
     static_files_bucket = fields.Str(required=True)
     environment_url = fields.Str(required=True)
+    purchase_domain = fields.Bool(required=False)

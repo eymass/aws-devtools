@@ -2,6 +2,7 @@ import json
 from app import BUCKETS_ROUTE
 
 
+
 def test_create_bucket_expect_success(app):
     user_data = {
         "name": "platform2011-europas-test3",

@@ -9,6 +9,8 @@ from api.deployments_statics import DeploymentStatics
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
     DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema
 from marshmallow import Schema, fields, validate
+
+from cloudfront_manager import CloudFrontManager
 from deployment_manager import DeploymentManager
 from elasticbeanstalk_manager import ElasticBeanstalkManager
 from route53_manager import Route53Manager
@@ -21,25 +23,30 @@ deployments_bp = Blueprint('deployments', __name__)
 def deploy_environment(args):
     """Endpoint to deploy an environment"""
     try:
-        req = DeployEnvironmentSchema().load(data=args)
-        deployment_manager = DeploymentManager()
-        print(f"deploying environment {req.environment_url} with domain {req.domain_name} and static files bucket {req.static_files_bucket}")
-        origins = DeploymentStatics.get_origins(static_files_bucket=req.static_files_bucket,
-                                                environment_url=req.environment_url)
-        default_cache_behavior = DeploymentStatics.get_default_cache_behavior(environment_url=req.environment_url)
-        cache_behavior = DeploymentStatics.get_cache_behaviors(static_files_bucket=req.static_files_bucket)
+        domain_name = args.get("domain_name", None)
+        contact_info = args.get("contact_info", None)
+        static_files_bucket = args.get("static_files_bucket", None)
+        environment_url = args.get("environment_url", None)
+        purchase_domain = args.get("purchase_domain", True)
 
-        deployment_manager.deploy_domain(domain_name=req.domain_name,
-                                         contact_info=req.contact_info,
+        deployment_manager = DeploymentManager()
+        print(f"deploying environment {environment_url} with domain {domain_name} and static files bucket {static_files_bucket}")
+        origins = DeploymentStatics.get_origins(static_files_bucket=static_files_bucket,
+                                                environment_url=environment_url)
+        default_cache_behavior = DeploymentStatics.get_default_cache_behavior(environment_url=environment_url)
+        cache_behavior = DeploymentStatics.get_cache_behaviors(static_files_bucket=static_files_bucket)
+
+        result = deployment_manager.deploy_domain(domain_name=domain_name,
+                                         contact_info=contact_info,
                                          origins=origins,
                                          default_cache_behavior=default_cache_behavior,
                                          cache_behaviors=cache_behavior,
-                                         purchase_domain=True)
+                                         purchase_domain=purchase_domain)
         print("Deployment successful")
-        return jsonify({"message": "Deployment successful"}), 201
+        return jsonify({"message": "Deployment successful", "result": result}), 201
     except Exception as e:
         print(f"error deploying environment {e}")
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/environments', methods=['POST'])
@@ -58,7 +65,7 @@ def create_environment(args):
         )
         return jsonify(response), 201
     except Exception as e:
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/environments', methods=['DELETE'])
@@ -100,6 +107,26 @@ def check_domain_availability():
         return abort(500, message=str(e))
 
 
+@deployments_bp.route('/domains/ownership', methods=['GET'])
+def check_domain_ownership():
+    """Endpoint to check domain ownership"""
+    try:
+        domain_name = request.args.get('domain')
+        print(f"checking domain ownership domain_name=[{domain_name}]")
+        if not domain_name or domain_name == "":
+            msg = "domain_name name is required"
+            print(msg)
+            return abort(400, message=msg)
+        response = Route53Manager().is_domain_owned(
+            domain_name=domain_name,
+        )
+        print(f"response: {response}")
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error checking domain ownership {e}")
+        return abort(500, message={"error": str(e)})
+
+
 @deployments_bp.route('/environments/configuration_template', methods=['POST'])
 @deployments_bp.arguments(CreateConfigurationTemplateSchema)
 def create_environment(args):
@@ -131,19 +158,18 @@ def restart_environment(args):
 
 
 @deployments_bp.route('/environments/status', methods=['GET'])
-@deployments_bp.arguments(GetEnvironmentStatusSchema, location="query")
-def get_environment_status(args):
+def get_environment_status():
     """Endpoint to get environment status"""
     try:
-        req = GetEnvironmentStatusSchema().load(args)
+        environment_name = request.args.get('environment_name')
         config = ElasticBeanstalkManager().get_environment_status(
-            environment_name=req['environment_name']
+            environment_name=environment_name
         )
         if config is None:
             return abort(404, description="Environment not found")
         return jsonify(config), 200
     except Exception as e:
-        return abort(500, description=str(e))
+        return abort(502, description=str(e))
 
 
 @deployments_bp.route('/environments/health', methods=['GET'])
@@ -168,6 +194,31 @@ def list_environment():
     """Endpoint to list environments in a region"""
     try:
         response = ElasticBeanstalkManager().list_environments()
+        json.dump(response["Environments"], open('data.json', 'w'), default=str)
+        jsonify({"data": response}), 200
+    except Exception as e:
+        return abort(500, message=str(e))
+
+
+@deployments_bp.route('/cloudfronts/list', methods=['GET'])
+def list_cloudfronts():
+    """Endpoint to list cloudfronts in a region"""
+    try:
+        response = CloudFrontManager().list_cloudfronts()
+        json.dump(response["Environments"], open('data.json', 'w'), default=str)
+        jsonify({"data": response}), 200
+    except Exception as e:
+        return abort(500, message=str(e))
+
+
+@deployments_bp.route('/cloudfronts/dist_id', methods=['GET'])
+def get_distribution_config():
+    """Get dist config in a region"""
+    try:
+        dist_id = request.args.get('distribution_id')
+        if not dist_id or dist_id == "":
+            return abort(400, message="distribution_id is required")
+        response = CloudFrontManager().get_distribution_config(distribution_id=dist_id)
         json.dump(response["Environments"], open('data.json', 'w'), default=str)
         jsonify({"data": response}), 200
     except Exception as e:

@@ -7,6 +7,14 @@ class CloudFrontManager:
     def __init__(self):
         self.client = boto3.client('cloudfront')
 
+    def list_cloudfronts(self) -> dict | None:
+        try:
+            distributions = self.client.list_distributions()
+            return distributions
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return
+
     def get_distribution_id_by_domain(self, domain_name):
         try:
             # List all distributions
@@ -23,6 +31,14 @@ class CloudFrontManager:
                 print(f"No distribution found for domain: {domain_name}")
                 return
             return distribution_id
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return
+
+    def get_distribution_config(self, distribution_id):
+        try:
+            dist_config = self.client.get_distribution_config(Id=distribution_id)
+            return dist_config
         except Exception as e:
             print(f"An error occurred: {e}")
             return

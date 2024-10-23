@@ -8,7 +8,7 @@ class DomainManager:
         self.route53domains_client = boto3.client('route53domains')
         self.cert_manager = CertificateManager()
 
-    def purchase_domain(self, domain_name, contact_info):
+    def purchase_domain(self, domain_name: str, contact_info: dict):
         try:
             response = self.route53domains_client.register_domain(
                 DomainName=domain_name,
