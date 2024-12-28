@@ -20,13 +20,13 @@ def handle_create_bucket(args):
         return jsonify(result), 201
     except AlreadyExists as e:
         print(e)
-        return abort(409, message=str(e))
+        return abort(409, message={"error": str(e)})
     except Exception as e:
         print(e)
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
-@buckets_bp.route('/:name', methods=['DELETE'])
+@buckets_bp.route('/', methods=['DELETE'])
 def delete_bucket():
     """Endpoint to delete a bucket"""
     try:
@@ -35,9 +35,9 @@ def delete_bucket():
             return jsonify({'error': 'name is required'}), 400
         result = S3Manager().delete_bucket(bucket_name=name)
         print(result)
-        return jsonify(result), 201
+        return jsonify(result), 204
     except Exception as e:
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 

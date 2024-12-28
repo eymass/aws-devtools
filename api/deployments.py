@@ -84,7 +84,7 @@ def terminate_environment():
         return jsonify(response), 201
     except Exception as e:
         print(f"error terminating environment {e}")
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/domains/availability', methods=['GET'])
@@ -104,7 +104,7 @@ def check_domain_availability():
         return jsonify(response), 201
     except Exception as e:
         print(f"error checking domain availability {e}")
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/domains/ownership', methods=['GET'])
@@ -129,17 +129,20 @@ def check_domain_ownership():
 
 @deployments_bp.route('/environments/configuration_template', methods=['POST'])
 @deployments_bp.arguments(CreateConfigurationTemplateSchema)
-def create_environment(args):
+def create_environment_template(args):
     """Endpoint to create configuration template"""
     try:
+        if not args.get("application_name", None) or args.get("application_name", None) == "":
+            return jsonify({"error": "application_name or application_name is missing"}), 400
         print("handling create configuration template")
         response = ElasticBeanstalkManager().create_configuration_template(
             application_name=args["application_name"],
+            environment_name=args["environment_name"],
         )
         return jsonify(response), 201
     except Exception as e:
         print(f"error creating configuration template {e}")
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/environments/restart', methods=['POST'])
@@ -154,7 +157,7 @@ def restart_environment(args):
         return jsonify(response), 201
     except Exception as e:
         print(f"error creating configuration template {e}")
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/environments/status', methods=['GET'])
@@ -197,7 +200,7 @@ def list_environment():
         json.dump(response["Environments"], open('data.json', 'w'), default=str)
         jsonify({"data": response}), 200
     except Exception as e:
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/cloudfronts/list', methods=['GET'])
@@ -208,7 +211,7 @@ def list_cloudfronts():
         json.dump(response["Environments"], open('data.json', 'w'), default=str)
         jsonify({"data": response}), 200
     except Exception as e:
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.route('/cloudfronts/dist_id', methods=['GET'])
@@ -222,7 +225,7 @@ def get_distribution_config():
         json.dump(response["Environments"], open('data.json', 'w'), default=str)
         jsonify({"data": response}), 200
     except Exception as e:
-        return abort(500, message=str(e))
+        return abort(500, message={"error": str(e)})
 
 
 @deployments_bp.errorhandler(ValidationError)

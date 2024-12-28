@@ -41,7 +41,7 @@ class DeploymentStatics:
     }]
 
     @staticmethod
-    def get_cache_behaviors(static_files_bucket: str, path_pattern: str = '/assets/img/*'):
+    def get_cache_behaviors(static_files_bucket: str, path_pattern: str = '/assets/imgs/*'):
         return {
         'Quantity': 1,
         'Items': [

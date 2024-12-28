@@ -3,9 +3,9 @@ import json
 from app import DEPLOYMENTS_ROUTE
 from tests.utils import create_bucket_tests
 
-TEST_BUCKET_NAME = "mrktdevtools-test"
-DOMAIN_NAME = "testdomain.com"
-ENVIRONMENT_URL = "XXXXXXXX.us-east-1.elasticbeanstalk.com"
+TEST_BUCKET_NAME = "global-web3-sa-pens1"
+DOMAIN_NAME = "betterfuture2025.com"
+ENVIRONMENT_URL = "global-web3-sa-pens1.eba-p4cwtpiw.us-east-1.elasticbeanstalk.com"
 CONTACT_INFO = {
     'FirstName': 'John',
     'LastName': 'Doe',
@@ -21,7 +21,7 @@ CONTACT_INFO = {
 
 
 def test_e2e_deploy_environment_success(app):
-    create_bucket_tests(app, TEST_BUCKET_NAME)
+    #create_bucket_tests(app, TEST_BUCKET_NAME)
     deployment_data = {
         "domain_name": DOMAIN_NAME,
         "contact_info": CONTACT_INFO,

@@ -16,6 +16,7 @@ class GetEnvironmentStatusSchema(Schema):
 
 class CreateConfigurationTemplateSchema(Schema):
     application_name = fields.Str(required=True)
+    environment_name = fields.Str(required=True)
 
 
 class RestartSchema(Schema):

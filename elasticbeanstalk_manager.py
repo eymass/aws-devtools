@@ -113,17 +113,16 @@ class ElasticBeanstalkManager:
             print(f"[{self.role}] error: {e}")
             raise
 
-    def create_configuration_template(self, application_name: str):
+    def create_configuration_template(self, application_name: str, environment_name: str):
         try:
             print(f"[{self.role}] Getting example environment id for application {application_name}")
-            example_environment_id = self.get_environment_id_by_application_name(application_name)
-            if not example_environment_id:
-                print(f"[{self.role}] Example environment not found for application, finish {application_name}")
-                return
+            env_id = (
+                self.get_environment_id_by_environment_name(application_name=application_name,
+                                                            environment_name=environment_name))
             args = {
                 "ApplicationName": application_name,
                 "TemplateName": "template-" + application_name,
-                "EnvironmentId": example_environment_id
+                "EnvironmentId": env_id
             }
             print(f"[{self.role}] Creating configuration template for application {application_name}, args: {args}")
             result = self.client.create_configuration_template(**args)
@@ -204,4 +203,20 @@ class ElasticBeanstalkManager:
         except Exception as e:
             print(f"[{self.role}] error: {e}")
             raise e
+
+    def get_environment_id_by_environment_name(self, application_name: str, environment_name: str) -> str | None:
+        try:
+            response = self.client.describe_environments(
+                EnvironmentNames=[environment_name],
+                ApplicationName=application_name,
+            )
+            environments = response.get('Environments', [])
+            if not environments:
+                print(f"[{self.role}] Environment not found for environment {environment_name}")
+                return
+            environment = environments[0]
+            return environment.get('EnvironmentId')
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise
 

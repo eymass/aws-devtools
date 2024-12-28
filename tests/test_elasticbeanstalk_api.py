@@ -66,13 +66,20 @@ def test_get_environment_status_success(app):
     assert response.json['Status'] == EBEnvironmentStatus.Terminated
 
 def test_create_environments_success(app):
-    env_name = "global-web3-test2"
+    env_name = "global-dynamic-pens1"
     request = {
         "environment_name": env_name,
-        "description": "test description",
-        "application_name": "global-web3",
-        "template_name": "template-global-web3",
-        "environment_variables": {"test": "test"}
+        "description": "global dynamic pens",
+        "application_name": "global-dynamic",
+        #"template_name": "template-global-web3",
+        "environment_variables": {
+            "PLATFORM_ENV": "production",
+            "NAMESPACE": "global-web3-sa-pens1",
+            "BUCKET_URL": "https://global-web3-sa-pens1.s3.us-east-1.amazonaws.com",
+            "MONGO_URI": "mongodb+srv://sa-pens1admin:Ms+9v+k7vYz9Z<Ps@blog.7efvgcb.mongodb.net/global-web3-sa-pens1?retryWrites=true&w=majority",
+            "MONGO_DB": "global-web3-sa-pens1",
+            "GENERATOR_URL": "https://post-generator-ai-cfea6fc9daab.herokuapp.com",
+        }
     }
     response = app.test_client().post(DEPLOYMENTS_ROUTE+"environments",
                                       data=json.dumps(request), content_type='application/json')
@@ -89,11 +96,12 @@ def test_create_environments_success(app):
     assert 'Status' in response.json
     assert response.json["Status"] == EBEnvironmentStatus.Terminating
 
-
 def test_create_configuration_template_success(app):
-    app_name = "global-web3"
+    app_name = "global-dynamic"
+    env_name = "global-dynamic2"
     request = {
-        "application_name": "app_name",
+        "application_name": app_name,
+        "environment_name": env_name,
     }
     response = app.test_client().post(DEPLOYMENTS_ROUTE+"environments/configuration_template",
                                       data=json.dumps(request), content_type='application/json')
