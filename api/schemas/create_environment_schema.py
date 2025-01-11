@@ -19,6 +19,11 @@ class CreateConfigurationTemplateSchema(Schema):
     environment_name = fields.Str(required=True)
 
 
+class RemoveConfigurationTemplateSchema(Schema):
+    application_name = fields.Str(required=True)
+    template_name = fields.Str(required=True)
+
+
 class RestartSchema(Schema):
     environment_name = fields.Str(required=True)
 

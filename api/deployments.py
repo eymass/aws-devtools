@@ -7,7 +7,7 @@ from marshmallow import ValidationError
 from api.deployments_statics import DeploymentStatics
 
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
-    DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema
+    DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema, RemoveConfigurationTemplateSchema
 from marshmallow import Schema, fields, validate
 
 from cloudfront_manager import CloudFrontManager
@@ -54,6 +54,7 @@ def deploy_environment(args):
 def create_environment(args):
     """Endpoint to create an environment"""
     try:
+        print(f"[create_environment] start {args}")
         response = ElasticBeanstalkManager().create_environment(
             environment_name=args.get("environment_name", None),
             description=args.get("description", None),
@@ -63,8 +64,10 @@ def create_environment(args):
             environment_variables=args.get("environment_variables", None),
             tags=[],
         )
+        print(f"[create_environment] respond: {response}")
         return jsonify(response), 201
     except Exception as e:
+        print(f"[create_environment] error creating environment {e}")
         return abort(500, message={"error": str(e)})
 
 
@@ -127,6 +130,27 @@ def check_domain_ownership():
         return abort(500, message={"error": str(e)})
 
 
+@deployments_bp.route('/environments/validate', methods=['GET'])
+def validate_domain_e2e():
+    """" using validate_e2e_environment """
+    """Endpoint to remove configuration template"""
+    try:
+        environment_name = request.args.get('environment_name')
+        domain_name = request.args.get('domain_name')
+        if not environment_name or environment_name == "":
+            return jsonify({"error": "environment_name or environment_name is missing"}), 400
+        if not domain_name or domain_name == "":
+            return jsonify({"error": "domain_name or domain_name is missing"}), 400
+        print("handling validate env and domain")
+        response = ElasticBeanstalkManager().validate_e2e_environment(
+            environment_name=environment_name,
+            domain_name=domain_name,
+        )
+        return jsonify(response), 200
+    except Exception as e:
+        print(f"error validating environment {e}")
+        return abort(500, message={"error": str(e)})
+
 @deployments_bp.route('/environments/configuration_template', methods=['POST'])
 @deployments_bp.arguments(CreateConfigurationTemplateSchema)
 def create_environment_template(args):
@@ -142,6 +166,24 @@ def create_environment_template(args):
         return jsonify(response), 201
     except Exception as e:
         print(f"error creating configuration template {e}")
+        return abort(500, message={"error": str(e)})
+
+
+@deployments_bp.route('/environments/configuration_template', methods=['DELETE'])
+@deployments_bp.arguments(RemoveConfigurationTemplateSchema)
+def remove_environment_template(args):
+    """Endpoint to remove configuration template"""
+    try:
+        if not args.get("application_name", None) or args.get("application_name", None) == "":
+            return jsonify({"error": "application_name or application_name is missing"}), 400
+        print("handling remove configuration template")
+        response = ElasticBeanstalkManager().delete_configuration_template(
+            application_name=args["application_name"],
+            template_name=args["template_name"],
+        )
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error removing configuration template {e}")
         return abort(500, message={"error": str(e)})
 
 

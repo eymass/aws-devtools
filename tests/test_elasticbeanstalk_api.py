@@ -65,6 +65,7 @@ def test_get_environment_status_success(app):
     assert 'Status' in response.json
     assert response.json['Status'] == EBEnvironmentStatus.Terminated
 
+
 def test_create_environments_success(app):
     env_name = "global-dynamic-pens1"
     request = {
@@ -96,6 +97,7 @@ def test_create_environments_success(app):
     assert 'Status' in response.json
     assert response.json["Status"] == EBEnvironmentStatus.Terminating
 
+
 def test_create_configuration_template_success(app):
     app_name = "global-dynamic"
     env_name = "global-dynamic2"
@@ -109,3 +111,30 @@ def test_create_configuration_template_success(app):
     assert 'errors' not in response.json
     assert 'TemplateName' in response.json
     assert 'TemplateName' == "template-" + app_name
+
+
+def test_remove_configuration_template_success(app):
+    app_name = "global-dynamic"
+    template_name = "template-global-dynamic"
+    request = {
+        "application_name": app_name,
+        "template_name": template_name,
+    }
+    response = app.test_client().delete(DEPLOYMENTS_ROUTE+"environments/configuration_template",
+                                      data=json.dumps(request), content_type='application/json')
+    assert response.status_code == 201
+    assert 'errors' not in response.json
+    assert 'Status' in response.json
+
+
+def test_validate_domain_e2e(app):
+    domain_name = "aaaa.com"
+    environment_name = "global-dynamic-pen12"
+    request = {
+        "domain_name": domain_name,
+        "environment_name": environment_name
+    }
+    response = app.test_client().get(DEPLOYMENTS_ROUTE+"environments/validate",
+                                    query_string=request)
+    assert response.status_code == 200
+    assert 'errors' not in response.json

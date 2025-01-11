@@ -69,7 +69,7 @@ class ElasticBeanstalkManager:
             else:
                 print(f"[{self.role}] Using template name: {template_name}")
                 args['SolutionStackName'] = stack_name
-
+            print(f"[{self.role}] initiating environment create")
             return self.client.create_environment(**args)
         except Exception as e:
             print(f"[{self.role}] error: {e}")
@@ -180,6 +180,39 @@ class ElasticBeanstalkManager:
             print(f"[{self.role}] error: {e}")
             raise e
 
+    def validate_e2e_environment(self, environment_name: str, domain_name: str):
+        try:
+            # restart the environment
+            response = self.restart_environment(environment_name)
+            print(f"[{self.role}] Restarted environment {environment_name}")
+
+            # wait until environment to be green
+            import time
+            max_retries = 15
+            count = 0
+            while True:
+                count += 1
+                response = self.get_environment_status(environment_name)
+                if response.get('status') == EBEnvironmentStatus.Ready:
+                    print(f"[{self.role}] Environment is ready")
+                    break
+                if count >= max_retries:
+                    print(f"[{self.role}] environment not ready after 5 minutes, finish")
+                    raise Exception(f"[{self.role}] environment not ready after 5 minutes")
+                time.sleep(30)
+
+            # check the domain e2e if it is 200
+            import requests
+            url = f"https://{domain_name}"
+            response = requests.get(url)
+            print(f"[{self.role}] Domain {domain_name} status code: {response.status_code}")
+            if response.status_code != 200:
+                raise Exception(f"[{self.role}] Domain {domain_name} not reachable")
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+
     def retrieve_environment_logs(self, environment_name: str):
         try:
             print(f"[{self.role}] Retrieving environment logs for {environment_name}")
@@ -220,3 +253,14 @@ class ElasticBeanstalkManager:
             print(f"[{self.role}] error: {e}")
             raise
 
+    def delete_configuration_template(self, application_name: str, template_name: str) -> dict:
+        try:
+            response = self.client.delete_configuration_template(
+                ApplicationName=application_name,
+                TemplateName=template_name
+            )
+            print(
+                f"Configuration template '{template_name}' for application '{application_name}' deleted successfully.")
+            return response
+        except Exception as e:
+            print(f"Failed to delete configuration template: {e}")
