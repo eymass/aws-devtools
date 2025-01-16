@@ -3,9 +3,8 @@ import json
 from flask_smorest import Blueprint, abort
 from flask import jsonify, request
 from marshmallow import ValidationError
-
+from celery_app import celery_app
 from api.deployments_statics import DeploymentStatics
-
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
     DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema, RemoveConfigurationTemplateSchema
 from marshmallow import Schema, fields, validate
@@ -29,24 +28,52 @@ def deploy_environment(args):
         environment_url = args.get("environment_url", None)
         purchase_domain = args.get("purchase_domain", True)
 
-        deployment_manager = DeploymentManager()
         print(f"deploying environment {environment_url} with domain {domain_name} and static files bucket {static_files_bucket}")
         origins = DeploymentStatics.get_origins(static_files_bucket=static_files_bucket,
                                                 environment_url=environment_url)
         default_cache_behavior = DeploymentStatics.get_default_cache_behavior(environment_url=environment_url)
         cache_behavior = DeploymentStatics.get_cache_behaviors(static_files_bucket=static_files_bucket)
 
-        result = deployment_manager.deploy_domain(domain_name=domain_name,
-                                         contact_info=contact_info,
-                                         origins=origins,
-                                         default_cache_behavior=default_cache_behavior,
-                                         cache_behaviors=cache_behavior,
-                                         purchase_domain=purchase_domain)
+        task = deploy_domain_task_wrapped.apply_async(
+            args=[domain_name, contact_info, origins, default_cache_behavior, cache_behavior, purchase_domain]
+        )
         print("Deployment successful")
-        return jsonify({"message": "Deployment successful", "result": result}), 201
+        return jsonify({"message": "Deployment scheduled", "jobId": task.id}), 202
     except Exception as e:
         print(f"error deploying environment {e}")
         return abort(500, message={"error": str(e)})
+
+
+@celery_app.task
+def deploy_domain_task_wrapped(domain_name, contact_info, origins, default_cache_behavior,
+                               cache_behavior, purchase_domain):
+    try:
+        deployment_manager = DeploymentManager()
+        print("starting deploy_domain_task_wrapped")
+        result = deployment_manager.deploy_domain(domain_name=domain_name,
+                                                  contact_info=contact_info,
+                                                  origins=origins,
+                                                  default_cache_behavior=default_cache_behavior,
+                                                  cache_behaviors=cache_behavior,
+                                                  purchase_domain=purchase_domain)
+        return result
+    except Exception as e:
+        print(f"error deploying domain {e}")
+        raise e
+
+
+@deployments_bp.route('/jobs/<job_id>', methods=['GET'])
+def get_job_status(job_id):
+    task = deploy_domain_task_wrapped.AsyncResult(job_id)
+    if task.state == 'PENDING':
+        response = {"state": task.state, "message": "Task is pending"}
+    elif task.state == 'SUCCESS':
+        response = {"state": task.state, "result": task.result}
+    elif task.state == 'FAILURE':
+        response = {"state": task.state, "error": str(task.info)}
+    else:
+        response = {"state": task.state, "message": "Task is processing"}
+    return jsonify(response)
 
 
 @deployments_bp.route('/environments', methods=['POST'])

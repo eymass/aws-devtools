@@ -1,11 +1,11 @@
 import time
 
-import boto3
 from botocore.exceptions import ClientError
 from certificate_manager import CertificateManager
 from route53_manager import Route53Manager
 from cloudfront_manager import CloudFrontManager
 from domain_manager import DomainManager
+from marshmallow import ValidationError
 
 
 class DeploymentManager:
@@ -46,6 +46,11 @@ class DeploymentManager:
                 # blocking call
                 # TODO switch to job
                 self.purchase_domain(domain_name, contact_info)
+            else:
+                ownership = self.route53_manager.is_domain_owned(domain_name)
+                print("Domain ownership check result:", ownership)
+                if "Owned" in ownership and ownership["Owned"] is False:
+                    raise ValidationError("Domain is not owned by the account.")
 
             # Step 2: Create certificate for the domain
             certificate_arn, validation_options = self.domain_manager.create_certificate_for_domain(domain_name)
