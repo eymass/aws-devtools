@@ -4,9 +4,9 @@ import time
 
 from app import DEPLOYMENTS_ROUTE
 
-TEST_BUCKET_NAME = "global-web3-sa-pens1"
-DOMAIN_NAME = "betterfuture2025.com"
-ENVIRONMENT_URL = "global-web3-sa-pens1.eba-p4cwtpiw.us-east-1.elasticbeanstalk.com"
+TEST_BUCKET_NAME = "test-bucket"
+DOMAIN_NAME = "test.com"
+ENVIRONMENT_URL = "test-env.eba-p4cwtpiw.us-east-1.elasticbeanstalk.com"
 CONTACT_INFO = {
     'FirstName': 'John',
     'LastName': 'Doe',
@@ -38,11 +38,14 @@ def test_e2e_deploy_environment_success(app):
 
     max_count = 10
     count = 1
+    job_id = response.json.get("jobId")
     while True:
-        response = app.test_client().get(DEPLOYMENTS_ROUTE + f"jobs/{response.json.get("jobId")}")
+        response = app.test_client().get(DEPLOYMENTS_ROUTE + f"jobs/{job_id}")
         assert response.status_code == 200
         if response.json.get("state") == "SUCCESS" or response.json.get("state") == "FAILURE":
-            assert response.json.get("state") == "FAILURE"
+            assert response.json.get("state") == "SUCCESS"
+            assert "result" in response.json
+            assert response.json["result"]["deployed"] is False
             break
         if count >= max_count:
             break

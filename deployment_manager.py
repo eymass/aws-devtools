@@ -50,7 +50,7 @@ class DeploymentManager:
                 ownership = self.route53_manager.is_domain_owned(domain_name)
                 print("Domain ownership check result:", ownership)
                 if "Owned" in ownership and ownership["Owned"] is False:
-                    raise ValidationError("Domain is not owned by the account.")
+                    return {"message": "Domain is not owned by the account.", "deployed": False}
 
             # Step 2: Create certificate for the domain
             certificate_arn, validation_options = self.domain_manager.create_certificate_for_domain(domain_name)
