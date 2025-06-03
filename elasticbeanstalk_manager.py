@@ -21,7 +21,7 @@ class ElasticBeanstalkManager:
                            template_name: str,
                            description: str,
                            tags: list,
-                           environment_variables: dict):
+                           environment_variables: dict, proceed_when_exists: bool = False):
         try:
             option_settings = [
                 {
@@ -150,6 +150,22 @@ class ElasticBeanstalkManager:
             print(f"[{self.role}] error: {e}")
             raise
 
+    def update_environment_with_latest_version(self, environment_name: str, application_name: str):
+        try:
+            version_label = self.get_latest_application_version_label(application_name)
+            if version_label is None:
+                print(f"[{self.role}] Application version not found for application {application_name}")
+                return
+            print(f"[{self.role}] Updating environment {environment_name} with version {version_label}")
+            response = self.client.update_environment(
+                EnvironmentName=environment_name,
+                VersionLabel=version_label
+            )
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+
     def get_environment_status(self, environment_name: str) -> None | dict:
         try:
             response = self.client.describe_environments(
@@ -173,6 +189,16 @@ class ElasticBeanstalkManager:
     def restart_environment(self, environment_name: str):
         try:
             response = self.client.restart_app_server(
+                EnvironmentName=environment_name
+            )
+            return response
+        except Exception as e:
+            print(f"[{self.role}] error: {e}")
+            raise e
+
+    def rebuild_environment(self, environment_name: str):
+        try:
+            response = self.client.rebuild_environment(
                 EnvironmentName=environment_name
             )
             return response

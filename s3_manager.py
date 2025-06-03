@@ -84,3 +84,13 @@ class S3Manager:
 
     def delete_file(self, bucket_name, key):
         self.s3.delete_object(Bucket=bucket_name, Key=key)
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Create an S3 bucket.')
+    parser.add_argument('bucket_name', type=str, help='The name of the S3 bucket to create')
+    args = parser.parse_args()
+    result = S3Manager().create_bucket(args.bucket_name)
+    print(result)

@@ -73,6 +73,7 @@ def get_job_status(job_id):
         response = {"state": task.state, "error": str(task.info)}
     else:
         response = {"state": task.state, "message": "Task is processing"}
+    print(f"[get_job_status] {response}")
     return jsonify(response)
 
 
@@ -226,6 +227,21 @@ def restart_environment(args):
         return jsonify(response), 201
     except Exception as e:
         print(f"error creating configuration template {e}")
+        return abort(500, message={"error": str(e)})
+
+
+@deployments_bp.route('/environments/rebuild', methods=['POST'])
+@deployments_bp.arguments(RestartSchema)
+def rebuild_environment(args):
+    """Endpoint to rebuild env"""
+    try:
+        print("handling rebuild env")
+        response = ElasticBeanstalkManager().rebuild_environment(
+            environment_name=args["environment_name"],
+        )
+        return jsonify(response), 201
+    except Exception as e:
+        print(f"error rebuilding env {e}")
         return abort(500, message={"error": str(e)})
 
 

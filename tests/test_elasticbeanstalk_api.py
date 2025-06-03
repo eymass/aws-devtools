@@ -17,7 +17,7 @@ def test_get_environment_health_success(app):
 
 
 def test_restart_environment_success(app):
-    env_name = "apprca"
+    env_name = "global-dynamic-topmagz5"
     request = {
         "environment_name": env_name
     }
