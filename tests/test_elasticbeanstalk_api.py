@@ -1,6 +1,6 @@
 import json
 
-from app import DEPLOYMENTS_ROUTE
+from app import DEPLOYMENTS_ROUTE, BUCKETS_ROUTE
 from elasticbeanstalk_manager import EBEnvironmentStatus
 
 
@@ -100,7 +100,7 @@ def test_create_environments_success(app):
 
 def test_create_configuration_template_success(app):
     app_name = "global-dynamic"
-    env_name = "global-dynamic2"
+    env_name = "global-dynamic-travello6"
     request = {
         "application_name": app_name,
         "environment_name": env_name,
@@ -138,3 +138,25 @@ def test_validate_domain_e2e(app):
                                     query_string=request)
     assert response.status_code == 200
     assert 'errors' not in response.json
+
+def test_terminate_environment_success(app):
+    env_name = "global-dynamic-travello4"
+    response = app.test_client().delete(DEPLOYMENTS_ROUTE+"environments?name="+env_name)
+    assert response.status_code == 201
+    assert 'errors' not in response.json
+    assert 'Status' in response.json
+    assert response.json["Status"] == EBEnvironmentStatus.Terminating
+
+
+def test_cleanup_namespace(app):
+    namespace = "global-dynamic-travello5"
+    
+    response = app.test_client().delete(BUCKETS_ROUTE+"?name="+namespace)
+    assert response.status_code == 204
+    assert 'errors' not in response.json
+    
+    response = app.test_client().delete(DEPLOYMENTS_ROUTE+"environments?name="+namespace)
+    assert response.status_code == 201
+    assert 'errors' not in response.json
+    assert 'Status' in response.json
+    assert response.json["Status"] == EBEnvironmentStatus.Terminating

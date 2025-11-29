@@ -5,7 +5,6 @@ from certificate_manager import CertificateManager
 from route53_manager import Route53Manager
 from cloudfront_manager import CloudFrontManager
 from domain_manager import DomainManager
-from marshmallow import ValidationError
 
 
 class DeploymentManager:

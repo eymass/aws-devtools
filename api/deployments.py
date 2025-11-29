@@ -7,8 +7,7 @@ from celery_app import celery_app
 from api.deployments_statics import DeploymentStatics
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
     DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema, RemoveConfigurationTemplateSchema
-from marshmallow import Schema, fields, validate
-
+import traceback
 from cloudfront_manager import CloudFrontManager
 from deployment_manager import DeploymentManager
 from elasticbeanstalk_manager import ElasticBeanstalkManager
@@ -31,9 +30,10 @@ def deploy_environment(args):
         print(f"deploying environment {environment_url} with domain {domain_name} and static files bucket {static_files_bucket}")
         origins = DeploymentStatics.get_origins(static_files_bucket=static_files_bucket,
                                                 environment_url=environment_url)
+        print(f"origins: {origins}")
         default_cache_behavior = DeploymentStatics.get_default_cache_behavior(environment_url=environment_url)
         cache_behavior = DeploymentStatics.get_cache_behaviors(static_files_bucket=static_files_bucket)
-
+        print(f"cache_behavior: {cache_behavior}")
         task = deploy_domain_task_wrapped.apply_async(
             args=[domain_name, contact_info, origins, default_cache_behavior, cache_behavior, purchase_domain]
         )
@@ -41,6 +41,7 @@ def deploy_environment(args):
         return jsonify({"message": "Deployment scheduled", "jobId": task.id}), 202
     except Exception as e:
         print(f"error deploying environment {e}")
+        traceback.print_exc()
         return abort(500, message={"error": str(e)})
 
 

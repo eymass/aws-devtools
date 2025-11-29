@@ -83,13 +83,21 @@ class CloudFrontManager:
 
     def create_distribution(self, domain_name, certificate_arn, origins, default_cache_behavior, cache_behaviors):
         try:
+            # Determine if the default origin is an S3 bucket
+            target_origin_id = default_cache_behavior.get('TargetOriginId')
+            is_s3_origin = False
+            if target_origin_id:
+                for origin in origins:
+                    if origin.get('Id') == target_origin_id and 'S3OriginConfig' in origin:
+                        is_s3_origin = True
+                        break
+
             distribution_config = {
                 'CallerReference': str(time.time()),
                 'Aliases': {
                     'Quantity': 2,
-                    'Items': [domain_name, "www."+domain_name]
+                    'Items': [domain_name, "www." + domain_name]
                 },
-                'DefaultRootObject': '',
                 'Origins': {
                     'Quantity': len(origins),
                     'Items': origins
@@ -104,6 +112,10 @@ class CloudFrontManager:
                     'MinimumProtocolVersion': 'TLSv1.2_2021'
                 }
             }
+            
+            if is_s3_origin:
+                distribution_config['DefaultRootObject'] = 'index.html'
+
             response = self.client.create_distribution(DistributionConfig=distribution_config)
             distribution_id = response['Distribution']['Id']
             distribution_domain_name = response['Distribution']['DomainName']
