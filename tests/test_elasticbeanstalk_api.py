@@ -17,7 +17,7 @@ def test_get_environment_health_success(app):
 
 
 def test_restart_environment_success(app):
-    env_name = "global-dynamic-topmagz5"
+    env_name = "global-dynamic-travello7"
     request = {
         "environment_name": env_name
     }
@@ -140,7 +140,7 @@ def test_validate_domain_e2e(app):
     assert 'errors' not in response.json
 
 def test_terminate_environment_success(app):
-    env_name = "global-dynamic-travello4"
+    env_name = "travello6"
     response = app.test_client().delete(DEPLOYMENTS_ROUTE+"environments?name="+env_name)
     assert response.status_code == 201
     assert 'errors' not in response.json
@@ -149,7 +149,8 @@ def test_terminate_environment_success(app):
 
 
 def test_cleanup_namespace(app):
-    namespace = "global-dynamic-travello5"
+    namespace = "global-dynamic-travello6"
+    
     
     response = app.test_client().delete(BUCKETS_ROUTE+"?name="+namespace)
     assert response.status_code == 204
