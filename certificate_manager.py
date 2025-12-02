@@ -57,9 +57,10 @@ class CertificateManager:
                 validation_options = cert_details['Certificate'].get("DomainValidationOptions", None)
                 if not validation_options:
                     print("DomainValidationOptions is missign from response")
-                if len(validation_options) > 0 and 'ResourceRecord' in validation_options[0]:
-                    print(f"Found DomainValidationOptions after {retries+1} retries.")
-                    found = True
+                else:
+                    if len(validation_options) > 0 and 'ResourceRecord' in validation_options[0]:
+                        print(f"Found DomainValidationOptions after {retries+1} retries.")
+                        found = True
                 retries += 1
                 sleep(5)
             return certificate_arn, validation_options
