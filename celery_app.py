@@ -13,7 +13,7 @@ if not CELERY_BROKER_URL:
     sys.exit(1)
 
 celery_app = Celery(
-    'my_project',
+    'aws_devtools',
     broker=CELERY_BROKER_URL,  # MongoDB as the broker
     backend=CELERY_BROKER_URL  # MongoDB as the result backend
 )

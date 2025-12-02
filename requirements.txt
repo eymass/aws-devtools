@@ -6,6 +6,7 @@ flask-smorest
 flask-testing==0.8.1
 requests==2.32.3
 waitress==1.4.3
+gunicorn==21.2.0
 pytest==8.3.2
 moto
 marshmallow==3.21.3

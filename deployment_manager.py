@@ -98,6 +98,6 @@ class DeploymentManager:
 
             print("Deployment successful!")
             return {"hosted_zone_id": hosted_zone_id, "distribution_id": distribution_id, "domain_name": domain_name,
-                    "distribution_domain_name": distribution_domain_name}
+                    "distribution_domain_name": distribution_domain_name, "state": "SUCCESS"}
         except ClientError as e:
             print(f"An error occurred during deployment: {e}")

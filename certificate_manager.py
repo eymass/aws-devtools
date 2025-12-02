@@ -52,14 +52,16 @@ class CertificateManager:
             validation_options = []
             found = False
             retries = 0
-            while found is False and retries < 5:
+            while found is False and retries < 15:
                 cert_details = self.client.describe_certificate(CertificateArn=certificate_arn)
-                validation_options = cert_details['Certificate']['DomainValidationOptions']
+                validation_options = cert_details['Certificate'].get("DomainValidationOptions", None)
+                if not validation_options:
+                    print("DomainValidationOptions is missign from response")
                 if len(validation_options) > 0 and 'ResourceRecord' in validation_options[0]:
                     print(f"Found DomainValidationOptions after {retries+1} retries.")
                     found = True
                 retries += 1
-                sleep(3)
+                sleep(5)
             return certificate_arn, validation_options
         except ClientError as e:
             print(f"An error occurred while creating the certificate: {e}")
