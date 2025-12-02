@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 class Route53Manager:
     def __init__(self):
         self.client = boto3.client('route53')
-        self.domains_client = boto3.client('route53domains')
+        self.domains_client = boto3.client('route53domains', region_name="us-east-1")
 
     def remove_hosted_zone_by_domain(self, domain_name):
         try:
