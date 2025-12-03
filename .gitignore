@@ -1,1 +1,9 @@
 .env
+.idea
+__pycache__
+
+.venv
+
+*.pyc
+
+*.log
