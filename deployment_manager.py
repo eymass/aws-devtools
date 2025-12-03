@@ -44,7 +44,13 @@ class DeploymentManager:
             if purchase_domain:
                 # blocking call
                 # TODO switch to job
-                self.purchase_domain(domain_name, contact_info)
+                ownership = Route53Manager().is_domain_owned(
+                    domain_name=domain_name,
+                )
+                if "Owned" in ownership and ownership["Owned"] is True:
+                    pass
+                else:
+                    self.purchase_domain(domain_name, contact_info)
             else:
                 ownership = self.route53_manager.is_domain_owned(domain_name)
                 print("Domain ownership check result:", ownership)
