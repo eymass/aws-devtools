@@ -51,6 +51,7 @@ class DeploymentManager:
                 if "Owned" in ownership and ownership["Owned"] is False:
                     return {"message": "Domain is not owned by the account.", "deployed": False}
 
+            domain_name = domain_name.lower()
             # Step 2: Create certificate for the domain
             certificate_arn, validation_options = self.domain_manager.create_certificate_for_domain(domain_name)
             print(f"Certificate created for domain {domain_name} with ARN: {certificate_arn}")
@@ -61,7 +62,7 @@ class DeploymentManager:
             # Step 3: Create the CNAME record for DNS validation
             for option in validation_options:
                 if 'ResourceRecord' in option:
-                    self.route53_manager.add_cname_record(domain_name, option['ResourceRecord']['Name'], option['ResourceRecord']['Value'])
+                    self.route53_manager.add_cname_record(domain_name.lower(), option['ResourceRecord']['Name'], option['ResourceRecord']['Value'])
                     print(f"CNAME record created for DNS validation: {option['ResourceRecord']['Name']} -> {option['ResourceRecord']['Value']}")
                 else:
                     print(f"No CNAME record found in validation option {option}.")
@@ -74,9 +75,10 @@ class DeploymentManager:
             max_retries = 10
             while True:
                 response = self.certificate_manager.get_certificate(certificate_arn)
-                if response['Status'] == 'ISSUED':
+                print(f"Certificate result: {response}")
+                if response['Status'].upper() == 'ISSUED':
                     break
-                if response['Status'] == 'FAILED':
+                if response['Status'].upper() == 'FAILED':
                     raise Exception("Certificate issuance failed.")
                 if count >= max_retries:
                     raise Exception("Timed out waiting for certificate issuance.")
