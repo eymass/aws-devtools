@@ -53,7 +53,7 @@ class ElasticBeanstalkManager:
                       "Type": "Standard",
                       "Version": "1.0"
                 },
-                "Description": description,
+                "Description": description[0:198],
             }
 
             if version_label is not None:
