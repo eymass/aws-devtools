@@ -2,6 +2,7 @@ import os
 import sys
 
 from flask import Flask, jsonify
+from flask_smorest import Api
 from api.deployments import deployments_bp
 from api.buckets import buckets_bp
 from marshmallow import ValidationError
@@ -29,8 +30,38 @@ def validate_aws_env_vars():
 def create_app():
     validate_aws_env_vars()
     _app = Flask(__name__)
-    _app.register_blueprint(deployments_bp, url_prefix=DEPLOYMENTS_ROUTE)
-    _app.register_blueprint(buckets_bp, url_prefix=BUCKETS_ROUTE)
+
+    # ------------------------------------------------------------------
+    # OpenAPI / Swagger UI configuration
+    # ------------------------------------------------------------------
+    _app.config["API_TITLE"] = "Deployment Manager API"
+    _app.config["API_VERSION"] = "v1"
+    _app.config["OPENAPI_VERSION"] = "3.0.3"
+    _app.config["OPENAPI_URL_PREFIX"] = "/"
+    _app.config["OPENAPI_SWAGGER_UI_PATH"] = "/docs"
+    # Serve Swagger UI assets from jsDelivr CDN (no extra package needed)
+    _app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    _app.config["API_SPEC_OPTIONS"] = {
+        "info": {
+            "description": (
+                "API for provisioning AWS infrastructure for web deployments. "
+                "Supports registering domains via Route 53, creating CloudFront distributions "
+                "(with optional edge routing via CloudFront Functions), managing ElasticBeanstalk "
+                "environments, and orchestrating S3 bucket creation. "
+                "\n\n"
+                "Long-running operations (domain purchase, CloudFront provisioning) are handled "
+                "asynchronously — endpoints return a `jobId` immediately and you poll "
+                "`GET /api/deployments/jobs/{jobId}` to track progress."
+            ),
+        },
+        "servers": [
+            {"url": "/", "description": "Current host"},
+        ],
+    }
+
+    api = Api(_app)
+    api.register_blueprint(deployments_bp, url_prefix=DEPLOYMENTS_ROUTE)
+    api.register_blueprint(buckets_bp, url_prefix=BUCKETS_ROUTE)
 
     @_app.errorhandler(422)
     def handle_422_error(e):
