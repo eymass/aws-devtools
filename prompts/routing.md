@@ -281,3 +281,6 @@ Cache key: `X-Variant-Bucket` only (not country, not cookie). Three cache entrie
 
 The deploy_static should have a boolean to enable this attachment.
 If enabled create such a function if not provided or reuse existing one that was provided.
+
+please create a real runner for each aws resource creation just for the sake of playground.
+also create a cleaner, operation that remove a resource
