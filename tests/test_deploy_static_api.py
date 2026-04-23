@@ -84,3 +84,65 @@ def test_deploy_static_missing_s3_url_returns_422(app):
         content_type='application/json',
     )
     assert response.status_code == 422
+
+
+def test_deploy_static_with_viewer_request_geo_routing(app):
+    """POST /statics/deploy with enable_viewer_request=True and routing_type=geo returns 202."""
+    payload = {
+        "domain_name": DOMAIN_NAME,
+        "contact_info": CONTACT_INFO,
+        "s3_website_url": S3_WEBSITE_URL,
+        "purchase_domain": False,
+        "enable_viewer_request": True,
+        "routing_type": "geo",
+        "routing_config": {"country_to_variant": {"IL": "il", "DE": "de"}},
+    }
+    response = app.test_client().post(
+        DEPLOYMENTS_ROUTE + "statics/deploy",
+        data=json.dumps(payload),
+        content_type='application/json',
+    )
+    assert response.status_code == 202
+    assert response.json.get("jobId") is not None
+    assert 'errors' not in response.json
+
+
+def test_deploy_static_with_viewer_request_custom_code(app):
+    """POST /statics/deploy with enable_viewer_request=True and custom code returns 202."""
+    custom_code = (
+        "function handler(event) { return event.request; }"
+    )
+    payload = {
+        "domain_name": DOMAIN_NAME,
+        "contact_info": CONTACT_INFO,
+        "s3_website_url": S3_WEBSITE_URL,
+        "purchase_domain": False,
+        "enable_viewer_request": True,
+        "viewer_request_function_code": custom_code,
+        "viewer_request_function_name": "my-custom-fn",
+    }
+    response = app.test_client().post(
+        DEPLOYMENTS_ROUTE + "statics/deploy",
+        data=json.dumps(payload),
+        content_type='application/json',
+    )
+    assert response.status_code == 202
+    assert response.json.get("jobId") is not None
+
+
+def test_deploy_static_invalid_routing_type_returns_422(app):
+    """POST /statics/deploy with an unsupported routing_type returns 422."""
+    payload = {
+        "domain_name": DOMAIN_NAME,
+        "contact_info": CONTACT_INFO,
+        "s3_website_url": S3_WEBSITE_URL,
+        "purchase_domain": False,
+        "enable_viewer_request": True,
+        "routing_type": "not-a-real-type",
+    }
+    response = app.test_client().post(
+        DEPLOYMENTS_ROUTE + "statics/deploy",
+        data=json.dumps(payload),
+        content_type='application/json',
+    )
+    assert response.status_code == 422
