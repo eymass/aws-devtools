@@ -67,18 +67,33 @@ def deploy_domain_task_wrapped(domain_name, contact_info, origins, default_cache
 @deployments_bp.route('/statics/deploy', methods=['POST'])
 @deployments_bp.arguments(DeployStaticSchema)
 def deploy_static(args):
-    """Deploy CloudFront in front of an S3 static-website bucket URL."""
+    """Deploy CloudFront in front of an S3 static-website bucket URL.
+
+    Set enable_viewer_request=true to attach a CloudFront Function for logical routing.
+    Provide routing_type (geo/ab/utm/ip/device/path/composite) to use a template,
+    or supply viewer_request_function_code for a fully custom function.
+    """
     try:
         domain_name = args.get("domain_name")
         contact_info = args.get("contact_info")
         s3_website_url = args.get("s3_website_url")
         purchase_domain = args.get("purchase_domain", True)
+        enable_viewer_request = args.get("enable_viewer_request", False)
+        routing_type = args.get("routing_type")
+        viewer_request_function_code = args.get("viewer_request_function_code")
+        routing_config = args.get("routing_config")
+        viewer_request_function_name = args.get("viewer_request_function_name")
 
         print(f"[deploy_static] deploying domain={domain_name} "
-              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain}")
+              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain} "
+              f"enable_viewer_request={enable_viewer_request} routing_type={routing_type}")
 
         task = deploy_static_task_wrapped.apply_async(
-            args=[domain_name, contact_info, s3_website_url, purchase_domain]
+            args=[
+                domain_name, contact_info, s3_website_url, purchase_domain,
+                enable_viewer_request, routing_type, viewer_request_function_code,
+                routing_config, viewer_request_function_name,
+            ]
         )
         print(f"[deploy_static] task queued jobId={task.id}")
         return jsonify({"message": "Static deployment scheduled",
@@ -90,15 +105,26 @@ def deploy_static(args):
 
 
 @celery_app.task
-def deploy_static_task_wrapped(domain_name, contact_info, s3_website_url, purchase_domain):
+def deploy_static_task_wrapped(
+    domain_name, contact_info, s3_website_url, purchase_domain,
+    enable_viewer_request=False, routing_type=None,
+    viewer_request_function_code=None, routing_config=None,
+    viewer_request_function_name=None,
+):
     try:
         print(f"[deploy_static_task_wrapped] start "
-              f"domain={domain_name} s3_website_url={s3_website_url}")
+              f"domain={domain_name} s3_website_url={s3_website_url} "
+              f"enable_viewer_request={enable_viewer_request} routing_type={routing_type}")
         result = DeploymentManager().deploy_static_domain(
             domain_name=domain_name,
             contact_info=contact_info,
             s3_website_url=s3_website_url,
             purchase_domain=purchase_domain,
+            enable_viewer_request=enable_viewer_request,
+            routing_type=routing_type,
+            viewer_request_function_code=viewer_request_function_code,
+            routing_config=routing_config,
+            viewer_request_function_name=viewer_request_function_name,
         )
         print(f"[deploy_static_task_wrapped] done result={result}")
         return result

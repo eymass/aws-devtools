@@ -36,8 +36,17 @@ class DeployEnvironmentSchema(Schema):
     purchase_domain = fields.Bool(required=False)
 
 
+ROUTING_TYPES = ('geo', 'ab', 'utm', 'ip', 'device', 'path', 'composite')
+
+
 class DeployStaticSchema(Schema):
     domain_name = fields.Str(required=True)
     contact_info = fields.Dict(required=True)
     s3_website_url = fields.Str(required=True)
     purchase_domain = fields.Bool(load_default=True)
+    # Viewer-request function options
+    enable_viewer_request = fields.Bool(load_default=False)
+    routing_type = fields.Str(load_default=None, validate=validate.OneOf(ROUTING_TYPES))
+    viewer_request_function_code = fields.Str(load_default=None)
+    routing_config = fields.Dict(load_default=None)
+    viewer_request_function_name = fields.Str(load_default=None)

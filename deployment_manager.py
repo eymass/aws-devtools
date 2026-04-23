@@ -1,11 +1,14 @@
+import re
 import time
 
 from botocore.exceptions import ClientError
 from certificate_manager import CertificateManager
 from route53_manager import Route53Manager
 from cloudfront_manager import CloudFrontManager
+from cloudfront_function_manager import CloudFrontFunctionManager
 from domain_manager import DomainManager
 from api.deployments_statics import DeploymentStatics
+from viewer_request_templates import build_function_code
 
 
 class DeploymentManager:
@@ -111,29 +114,59 @@ class DeploymentManager:
         except ClientError as e:
             print(f"An error occurred during deployment: {e}")
 
-    def deploy_static_domain(self, domain_name: str, contact_info: dict,
-                             s3_website_url: str, purchase_domain: bool):
+    @staticmethod
+    def _viewer_request_function_name(domain_name: str) -> str:
+        """Derive a valid CloudFront Function name from a domain (1-64 chars, [a-zA-Z0-9-_])."""
+        slug = re.sub(r'[^a-zA-Z0-9\-_]', '-', domain_name)[:50]
+        return f"{slug}-viewer-request"
+
+    def deploy_static_domain(
+        self,
+        domain_name: str,
+        contact_info: dict,
+        s3_website_url: str,
+        purchase_domain: bool,
+        enable_viewer_request: bool = False,
+        routing_type: str | None = None,
+        viewer_request_function_code: str | None = None,
+        routing_config: dict | None = None,
+        viewer_request_function_name: str | None = None,
+    ):
         """Deploy CloudFront in front of an S3 static-website bucket.
 
-        Builds S3-website-specific origins and an optimised (CachingOptimized)
-        default cache behaviour, then delegates the full orchestration
-        (cert, Route53, CloudFront) to deploy_domain().
+        Optionally attaches a CloudFront viewer-request Function for logical routing
+        (geo, A/B, UTM, IP, device, path, composite). When enable_viewer_request is True
+        and no viewer_request_function_code is supplied, a template is generated from
+        routing_type (defaults to 'geo').
         """
         print(f"[DeploymentManager] deploy_static_domain: domain={domain_name} "
-              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain}")
+              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain} "
+              f"enable_viewer_request={enable_viewer_request} routing_type={routing_type}")
+
+        viewer_request_arn = None
+        if enable_viewer_request:
+            fn_name = viewer_request_function_name or self._viewer_request_function_name(domain_name)
+            fn_code = viewer_request_function_code or build_function_code(
+                routing_type or 'geo', routing_config
+            )
+            print(f"[DeploymentManager] deploy_static_domain: "
+                  f"creating/reusing CF function name={fn_name}")
+            viewer_request_arn = CloudFrontFunctionManager().get_or_create_function(fn_name, fn_code)
+            print(f"[DeploymentManager] deploy_static_domain: viewer_request_arn={viewer_request_arn}")
 
         origins = DeploymentStatics.get_s3_website_origins(s3_website_url)
         print(f"[DeploymentManager] deploy_static_domain: origins={origins}")
 
         default_cache_behavior = DeploymentStatics.get_s3_optimized_default_cache_behavior(
-            s3_website_url
+            s3_website_url,
+            viewer_request_arn=viewer_request_arn,
         )
         print(f"[DeploymentManager] deploy_static_domain: "
               f"default_cache_behavior={default_cache_behavior}")
 
         cache_behaviors = DeploymentStatics.get_empty_cache_behaviors()
 
-        return self.deploy_domain(
+        result = self.deploy_domain(
             domain_name=domain_name,
             contact_info=contact_info,
             origins=origins,
@@ -141,3 +174,6 @@ class DeploymentManager:
             cache_behaviors=cache_behaviors,
             purchase_domain=purchase_domain,
         )
+        if result and viewer_request_arn:
+            result['viewer_request_function_arn'] = viewer_request_arn
+        return result

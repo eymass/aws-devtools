@@ -159,9 +159,34 @@ class DeploymentStatics:
         ]
 
     @staticmethod
-    def get_s3_optimized_default_cache_behavior(s3_website_url: str):
-        """Default cache behavior optimised for purely static S3-website content."""
+    def get_viewer_request_function_associations(function_arn: str) -> dict:
+        """Return a FunctionAssociations dict that attaches a viewer-request CloudFront Function."""
+        return {
+            'Quantity': 1,
+            'Items': [
+                {
+                    'FunctionARN': function_arn,
+                    'EventType': 'viewer-request',
+                }
+            ],
+        }
+
+    @staticmethod
+    def get_s3_optimized_default_cache_behavior(
+        s3_website_url: str,
+        viewer_request_arn: str | None = None,
+    ):
+        """Default cache behavior optimised for purely static S3-website content.
+
+        Pass viewer_request_arn to attach a CloudFront Function for logical routing
+        (geo, A/B, UTM, IP, device, path, composite).
+        """
         domain = s3_website_url.removeprefix('http://').removeprefix('https://')
+        function_associations = (
+            DeploymentStatics.get_viewer_request_function_associations(viewer_request_arn)
+            if viewer_request_arn
+            else {'Quantity': 0}
+        )
         return {
             'TargetOriginId': domain,
             'TrustedSigners': {'Enabled': False, 'Quantity': 0},
@@ -178,7 +203,7 @@ class DeploymentStatics:
             'SmoothStreaming': False,
             'Compress': True,
             'LambdaFunctionAssociations': {'Quantity': 0},
-            'FunctionAssociations': {'Quantity': 0},
+            'FunctionAssociations': function_associations,
             'FieldLevelEncryptionId': '',
             'CachePolicyId': DeploymentStatics.CACHE_POLICY_CACHING_OPTIMIZED,
         }
