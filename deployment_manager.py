@@ -5,6 +5,7 @@ from certificate_manager import CertificateManager
 from route53_manager import Route53Manager
 from cloudfront_manager import CloudFrontManager
 from domain_manager import DomainManager
+from api.deployments_statics import DeploymentStatics
 
 
 class DeploymentManager:
@@ -109,3 +110,34 @@ class DeploymentManager:
                     "distribution_domain_name": distribution_domain_name, "state": "SUCCESS"}
         except ClientError as e:
             print(f"An error occurred during deployment: {e}")
+
+    def deploy_static_domain(self, domain_name: str, contact_info: dict,
+                             s3_website_url: str, purchase_domain: bool):
+        """Deploy CloudFront in front of an S3 static-website bucket.
+
+        Builds S3-website-specific origins and an optimised (CachingOptimized)
+        default cache behaviour, then delegates the full orchestration
+        (cert, Route53, CloudFront) to deploy_domain().
+        """
+        print(f"[DeploymentManager] deploy_static_domain: domain={domain_name} "
+              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain}")
+
+        origins = DeploymentStatics.get_s3_website_origins(s3_website_url)
+        print(f"[DeploymentManager] deploy_static_domain: origins={origins}")
+
+        default_cache_behavior = DeploymentStatics.get_s3_optimized_default_cache_behavior(
+            s3_website_url
+        )
+        print(f"[DeploymentManager] deploy_static_domain: "
+              f"default_cache_behavior={default_cache_behavior}")
+
+        cache_behaviors = DeploymentStatics.get_empty_cache_behaviors()
+
+        return self.deploy_domain(
+            domain_name=domain_name,
+            contact_info=contact_info,
+            origins=origins,
+            default_cache_behavior=default_cache_behavior,
+            cache_behaviors=cache_behaviors,
+            purchase_domain=purchase_domain,
+        )

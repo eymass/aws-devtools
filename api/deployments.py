@@ -6,7 +6,8 @@ from marshmallow import ValidationError
 from celery_app import celery_app
 from api.deployments_statics import DeploymentStatics
 from api.schemas.create_environment_schema import CreateEnvironmentSchema, GetEnvironmentStatusSchema, \
-    DeployEnvironmentSchema, CreateConfigurationTemplateSchema, RestartSchema, RemoveConfigurationTemplateSchema
+    DeployEnvironmentSchema, DeployStaticSchema, CreateConfigurationTemplateSchema, RestartSchema, \
+    RemoveConfigurationTemplateSchema
 import traceback
 from cloudfront_manager import CloudFrontManager
 from deployment_manager import DeploymentManager
@@ -60,6 +61,49 @@ def deploy_domain_task_wrapped(domain_name, contact_info, origins, default_cache
         return result
     except Exception as e:
         print(f"error deploying domain {e}")
+        raise e
+
+
+@deployments_bp.route('/statics/deploy', methods=['POST'])
+@deployments_bp.arguments(DeployStaticSchema)
+def deploy_static(args):
+    """Deploy CloudFront in front of an S3 static-website bucket URL."""
+    try:
+        domain_name = args.get("domain_name")
+        contact_info = args.get("contact_info")
+        s3_website_url = args.get("s3_website_url")
+        purchase_domain = args.get("purchase_domain", True)
+
+        print(f"[deploy_static] deploying domain={domain_name} "
+              f"s3_website_url={s3_website_url} purchase_domain={purchase_domain}")
+
+        task = deploy_static_task_wrapped.apply_async(
+            args=[domain_name, contact_info, s3_website_url, purchase_domain]
+        )
+        print(f"[deploy_static] task queued jobId={task.id}")
+        return jsonify({"message": "Static deployment scheduled",
+                        "jobId": task.id}), 202
+    except Exception as e:
+        print(f"[deploy_static] error: {e}")
+        traceback.print_exc()
+        return abort(500, message={"error": str(e)})
+
+
+@celery_app.task
+def deploy_static_task_wrapped(domain_name, contact_info, s3_website_url, purchase_domain):
+    try:
+        print(f"[deploy_static_task_wrapped] start "
+              f"domain={domain_name} s3_website_url={s3_website_url}")
+        result = DeploymentManager().deploy_static_domain(
+            domain_name=domain_name,
+            contact_info=contact_info,
+            s3_website_url=s3_website_url,
+            purchase_domain=purchase_domain,
+        )
+        print(f"[deploy_static_task_wrapped] done result={result}")
+        return result
+    except Exception as e:
+        print(f"[deploy_static_task_wrapped] error: {e}")
         raise e
 
 
@@ -179,6 +223,7 @@ def validate_domain_e2e():
     except Exception as e:
         print(f"error validating environment {e}")
         return abort(500, message={"error": str(e)})
+
 
 @deployments_bp.route('/environments/configuration_template', methods=['POST'])
 @deployments_bp.arguments(CreateConfigurationTemplateSchema)

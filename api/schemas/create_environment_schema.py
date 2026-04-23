@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate, post_load
+from marshmallow import Schema, fields, validate
 
 
 class CreateEnvironmentSchema(Schema):
@@ -34,3 +34,10 @@ class DeployEnvironmentSchema(Schema):
     static_files_bucket = fields.Str(required=True)
     environment_url = fields.Str(required=True)
     purchase_domain = fields.Bool(required=False)
+
+
+class DeployStaticSchema(Schema):
+    domain_name = fields.Str(required=True)
+    contact_info = fields.Dict(required=True)
+    s3_website_url = fields.Str(required=True)
+    purchase_domain = fields.Bool(load_default=True)
