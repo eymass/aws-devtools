@@ -108,3 +108,39 @@ Add Swagger/OpenAPI documentation to the API — expose `/docs` with Swagger UI;
 | `api/schemas/create_bucket_schema.py` | Added `metadata` to `name` field; added class docstring |
 | `api/schemas/response_schemas.py` | **New** — 9 response schemas: `AsyncJobResponseSchema`, `JobStatusResponseSchema`, `EnvironmentResponseSchema`, `DataListResponseSchema`, `DomainAvailabilityResponseSchema`, `EnvironmentStatusResponseSchema`, `EnvironmentHealthResponseSchema`, `ValidationResponseSchema`, `ErrorResponseSchema`, `BucketResponseSchema` |
 | `.flake8` | **New** — project lint configuration, `max-line-length = 120` |
+
+---
+
+## Session: 2026-04-27
+
+### Request
+Fix runtime failure: `CreateDistribution` returns `InvalidArgument: The parameter origin name must be a domain name` during `deploy_static_domain` flow (S3 → CloudFront on a domain). Verify the distribution request is aligned with AWS CloudFront requirements.
+
+### Routing Decision
+| Step | Classification | Pipeline Selected |
+|------|---------------|-------------------|
+| Intent detection | `dev-implementation` | code-implementation → tests-implementation → swe-linter → swe-tester-agent → swe-documentation |
+
+### Root Cause
+`api/deployments_statics.py::get_s3_website_origins` (and `get_s3_optimized_default_cache_behavior`) only stripped the `http://` / `https://` prefix from the user-supplied `s3_website_url` and used the result verbatim as both `Origin.Id` and `Origin.DomainName`. CloudFront's `Origins.Items[].DomainName` is a strict DNS hostname — it rejects trailing slashes, paths, ports, embedded whitespace, or upper-cased schemes, all of which are valid inputs from the API schema (`example: "http://my-landing-page.s3-website-us-east-1.amazonaws.com"` users frequently paste with a trailing `/`). When any of those slipped through, AWS responded with `InvalidArgument: The parameter origin name must be a domain name`.
+
+### Pipeline Execution
+
+| Step | Agent/Skill | Status | Notes |
+|------|-------------|--------|-------|
+| 1 | code-implementation | ✅ PASS | Added `DeploymentStatics.normalize_s3_website_domain()` (urllib-based hostname extraction); both `get_s3_website_origins` and `get_s3_optimized_default_cache_behavior` now route through it so `Origin.Id`, `Origin.DomainName`, and `DefaultCacheBehavior.TargetOriginId` always agree on the same bare host |
+| 2 | tests-implementation | ✅ PASS | New `tests/test_deployments_statics.py` — parametrised cases for trailing slash, path, port, scheme, whitespace, casing, plus empty-input rejection and `Id`/`TargetOriginId` consistency |
+| 3 | swe-linter | ✅ PASS | flake8 on new lines (1–29) clean; remaining E122s in file are all pre-existing (lines ≥33) |
+| 4 | swe-tester-agent | ✅ PASS | 35/35 pass (13 new + 22 pre-existing) under `CELERY_BROKER_URL=memory://` with stub AWS env |
+| 5 | swe-documentation | — | skipped — bug-fix to existing helper; no architecture change |
+
+### Gate Transitions
+- `swe-linter → swe-tester-agent`: PASS (no new lint errors introduced)
+- `swe-tester-agent → swe-documentation`: PASS (35/35 green; no regressions)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `api/deployments_statics.py` | Added `normalize_s3_website_domain()` helper; `get_s3_website_origins` and `get_s3_optimized_default_cache_behavior` use it instead of ad-hoc `removeprefix` |
+| `tests/test_deployments_statics.py` | **New** — 13 unit tests pinning normalizer behavior and Id/TargetOriginId consistency |
+
