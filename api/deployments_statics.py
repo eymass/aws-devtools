@@ -1,9 +1,31 @@
+from urllib.parse import urlparse
+
 
 class DeploymentStatics:
     # AWS managed cache/origin-request policy IDs
     CACHE_POLICY_CACHING_DISABLED = '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'
     CACHE_POLICY_CACHING_OPTIMIZED = '658327ea-f89d-4fab-a63d-7e88639e58f6'
     ORIGIN_REQUEST_POLICY_ALL_VIEWER = '216adef6-5c7f-47e4-b989-5492eafa07d3'
+
+    @staticmethod
+    def normalize_s3_website_domain(s3_website_url: str) -> str:
+        """Extract a bare DNS hostname from an S3 static-website URL.
+
+        CloudFront's ``Origins.Items[].DomainName`` rejects anything that is
+        not a pure hostname — schemes, ports, paths, trailing slashes, and
+        whitespace all trigger ``InvalidArgument: origin name must be a domain
+        name``. Callers may legitimately pass any of these (the API schema
+        example even includes ``http://``), so normalize here.
+        """
+        if not s3_website_url or not s3_website_url.strip():
+            raise ValueError("s3_website_url is required")
+        candidate = s3_website_url.strip()
+        if "://" not in candidate:
+            candidate = "http://" + candidate
+        host = urlparse(candidate).hostname
+        if not host:
+            raise ValueError(f"Could not parse domain from s3_website_url: {s3_website_url!r}")
+        return host
 
     @staticmethod
     def get_origins(static_files_bucket: str, environment_url: str):
@@ -134,7 +156,7 @@ class DeploymentStatics:
     def get_s3_website_origins(s3_website_url: str):
         """Single CustomOrigin pointing to an S3 static-website endpoint (HTTP only)."""
         # S3 website endpoints only support HTTP, so CloudFront must use http-only protocol
-        domain = s3_website_url.removeprefix('http://').removeprefix('https://')
+        domain = DeploymentStatics.normalize_s3_website_domain(s3_website_url)
         return [
             {
                 'Id': domain,
@@ -181,7 +203,7 @@ class DeploymentStatics:
         Pass viewer_request_arn to attach a CloudFront Function for logical routing
         (geo, A/B, UTM, IP, device, path, composite).
         """
-        domain = s3_website_url.removeprefix('http://').removeprefix('https://')
+        domain = DeploymentStatics.normalize_s3_website_domain(s3_website_url)
         function_associations = (
             DeploymentStatics.get_viewer_request_function_associations(viewer_request_arn)
             if viewer_request_arn

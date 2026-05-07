@@ -114,30 +114,33 @@ Add Swagger/OpenAPI documentation to the API — expose `/docs` with Swagger UI;
 ## Session: 2026-04-27
 
 ### Request
-Debug `TypeError: cannot unpack non-iterable NoneType object` at `deployment_manager.py:99` — `self.cloudfront_manager.create_distribution(...)` returned `None`, breaking the tuple unpack.
+Fix runtime failure: `CreateDistribution` returns `InvalidArgument: The parameter origin name must be a domain name` during `deploy_static_domain` flow (S3 → CloudFront on a domain). Verify the distribution request is aligned with AWS CloudFront requirements.
 
 ### Routing Decision
 | Step | Classification | Pipeline Selected |
 |------|---------------|-------------------|
-| Intent detection | `dev-implementation` (bug fix) | code-implementation → swe-linter |
+| Intent detection | `dev-implementation` | code-implementation → tests-implementation → swe-linter → swe-tester-agent → swe-documentation |
 
 ### Root Cause
-`CloudFrontManager.create_distribution` (cloudfront_manager.py:84) wrapped the AWS call in `try/except ClientError` that only printed the error and returned implicit `None`. The two callers (`deployment_manager.py:99`, `runners/run_cloudfront_distribution.py:43`) both unpack the return as `(id, domain_name)`, so any AWS error surfaced as a misleading `TypeError` instead of the real cause.
-
-### Fix
-Re-raise after logging in `cloudfront_manager.py:124-126`. The outer `deploy_domain` already has its own `except ClientError` that will catch the propagated exception and report it correctly.
+`api/deployments_statics.py::get_s3_website_origins` (and `get_s3_optimized_default_cache_behavior`) only stripped the `http://` / `https://` prefix from the user-supplied `s3_website_url` and used the result verbatim as both `Origin.Id` and `Origin.DomainName`. CloudFront's `Origins.Items[].DomainName` is a strict DNS hostname — it rejects trailing slashes, paths, ports, embedded whitespace, or upper-cased schemes, all of which are valid inputs from the API schema (`example: "http://my-landing-page.s3-website-us-east-1.amazonaws.com"` users frequently paste with a trailing `/`). When any of those slipped through, AWS responded with `InvalidArgument: The parameter origin name must be a domain name`.
 
 ### Pipeline Execution
+
 | Step | Agent/Skill | Status | Notes |
 |------|-------------|--------|-------|
-| 1 | code-implementation | ✅ PASS | One-line change in `cloudfront_manager.py` |
-| 2 | tests-implementation | ➡️ SKIPPED | No tests exist for `CloudFrontManager`; behaviour is "fail loud instead of silent" — no new logic to cover |
-| 3 | swe-linter | ✅ PASS | `py_compile` clean; flake8 not installed in venv |
-| 4 | swe-tester-agent | ➡️ SKIPPED | No new tests; existing suite requires real AWS creds |
-| 5 | swe-documentation | ➡️ SKIPPED | No architectural change |
+| 1 | code-implementation | ✅ PASS | Added `DeploymentStatics.normalize_s3_website_domain()` (urllib-based hostname extraction); both `get_s3_website_origins` and `get_s3_optimized_default_cache_behavior` now route through it so `Origin.Id`, `Origin.DomainName`, and `DefaultCacheBehavior.TargetOriginId` always agree on the same bare host |
+| 2 | tests-implementation | ✅ PASS | New `tests/test_deployments_statics.py` — parametrised cases for trailing slash, path, port, scheme, whitespace, casing, plus empty-input rejection and `Id`/`TargetOriginId` consistency |
+| 3 | swe-linter | ✅ PASS | flake8 on new lines (1–29) clean; remaining E122s in file are all pre-existing (lines ≥33) |
+| 4 | swe-tester-agent | ✅ PASS | 35/35 pass (13 new + 22 pre-existing) under `CELERY_BROKER_URL=memory://` with stub AWS env |
+| 5 | swe-documentation | — | skipped — bug-fix to existing helper; no architecture change |
+
+### Gate Transitions
+- `swe-linter → swe-tester-agent`: PASS (no new lint errors introduced)
+- `swe-tester-agent → swe-documentation`: PASS (35/35 green; no regressions)
 
 ### Files Changed
 | File | Change |
 |------|--------|
-| `cloudfront_manager.py` | `create_distribution` now `raise`s after logging the `ClientError` instead of returning `None` |
-| `deployment_manager.py` | `deploy_domain` outer `except ClientError` now re-raises after logging — prevents Celery task from reporting SUCCESS with `None` result on AWS failures; the real error reaches the job status |
+| `api/deployments_statics.py` | Added `normalize_s3_website_domain()` helper; `get_s3_website_origins` and `get_s3_optimized_default_cache_behavior` use it instead of ad-hoc `removeprefix` |
+| `tests/test_deployments_statics.py` | **New** — 13 unit tests pinning normalizer behavior and Id/TargetOriginId consistency |
+
