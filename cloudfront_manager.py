@@ -122,4 +122,5 @@ class CloudFrontManager:
             print(f"Distribution {distribution_id} for domain {domain_name} has been created.")
             return distribution_id, distribution_domain_name
         except ClientError as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred creating distribution for {domain_name}: {e}")
+            raise

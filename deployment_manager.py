@@ -112,7 +112,8 @@ class DeploymentManager:
             return {"hosted_zone_id": hosted_zone_id, "distribution_id": distribution_id, "domain_name": domain_name,
                     "distribution_domain_name": distribution_domain_name, "state": "SUCCESS"}
         except ClientError as e:
-            print(f"An error occurred during deployment: {e}")
+            print(f"An error occurred during deployment of {domain_name}: {e}")
+            raise
 
     @staticmethod
     def _viewer_request_function_name(domain_name: str) -> str:
