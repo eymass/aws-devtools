@@ -40,6 +40,7 @@ from pathlib import Path
 sys.path.insert(0, '..')
 
 from deployment_manager import DeploymentManager  # noqa: E402
+from viewer_request_templates import ROUTING_TYPES  # noqa: E402
 
 SAMPLE_DOMAIN = 'evestmena.com'
 SAMPLE_S3_URL = 'mrkt-ui-eymas-test.s3-website-us-east-1.amazonaws.com'
@@ -125,9 +126,10 @@ def main():
                           action='store_false',
                           help='disable viewer-request function attachment')
 
-    parser.add_argument('--routing-type', default='geo',
-                        choices=['geo', 'ab', 'utm', 'ip', 'device', 'path', 'composite'],
-                        help='template used to generate the viewer-request function body')
+    parser.add_argument('--routing-type', default='lps_by_uri',
+                        choices=list(ROUTING_TYPES),
+                        help='template used to generate the viewer-request function body '
+                             '(default: lps_by_uri — the canonical LP router)')
     parser.add_argument('--routing-config',
                         help='inline JSON or path to a JSON file consumed by build_function_code')
     parser.add_argument('--viewer-request-function-code',

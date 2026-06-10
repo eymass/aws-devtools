@@ -1,6 +1,10 @@
 import json
+import re
+from pathlib import Path
 
-ROUTING_TYPES = ('geo', 'ab', 'utm', 'ip', 'device', 'path', 'composite')
+ROUTING_TYPES = ('lps_by_uri', 'geo', 'ab', 'utm', 'ip', 'device', 'path', 'composite')
+
+_LPS_BY_URI_JS_PATH = Path(__file__).parent / 'functions' / 'lps_by_uri.js'
 
 
 def _geo(config: dict) -> str:
@@ -154,7 +158,47 @@ def _composite(config: dict) -> str:
     )
 
 
+def _lps_by_uri(config: dict) -> str:
+    """Default static-deploy router.
+
+    Reads the canonical JS body from ``functions/lps_by_uri.js`` so the file
+    visible in the repo IS the source of truth — editing it changes what the
+    next deploy uploads. Optional ``routing_config`` overrides:
+
+      whitelist_countries: list of ISO-2 codes (uppercased automatically)
+      bot_keywords:        list of UA substrings that mark a bot
+      iab_ua_markers:      list of UA substrings that mark an in-app browser
+      safe_uri:            URI used for blacklisted traffic (default '/index.html')
+    """
+    js = _LPS_BY_URI_JS_PATH.read_text()
+
+    countries = config.get('whitelist_countries')
+    if countries is not None:
+        js = re.sub(
+            r"var whitelistCountries = \[[^\]]*\];",
+            f"var whitelistCountries = {json.dumps([c.upper() for c in countries])};",
+            js,
+            count=1,
+        )
+
+    bot_keywords = config.get('bot_keywords')
+    if bot_keywords is not None:
+        js = re.sub(
+            r"var botKeywords = \[[^\]]*\];",
+            f"var botKeywords = {json.dumps([k.lower() for k in bot_keywords])};",
+            js,
+            count=1,
+        )
+
+    safe_uri = config.get('safe_uri')
+    if safe_uri:
+        js = js.replace("'/index.html'", json.dumps(safe_uri))
+
+    return js
+
+
 _BUILDERS = {
+    'lps_by_uri': _lps_by_uri,
     'geo': _geo,
     'ab': _ab,
     'utm': _utm,

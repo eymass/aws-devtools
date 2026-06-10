@@ -127,7 +127,7 @@ class DeploymentManager:
         contact_info: dict,
         s3_website_url: str,
         purchase_domain: bool,
-        enable_viewer_request: bool = False,
+        enable_viewer_request: bool = True,
         routing_type: str | None = None,
         viewer_request_function_code: str | None = None,
         routing_config: dict | None = None,
@@ -135,10 +135,12 @@ class DeploymentManager:
     ):
         """Deploy CloudFront in front of an S3 static-website bucket.
 
-        Optionally attaches a CloudFront viewer-request Function for logical routing
-        (geo, A/B, UTM, IP, device, path, composite). When enable_viewer_request is True
-        and no viewer_request_function_code is supplied, a template is generated from
-        routing_type (defaults to 'geo').
+        A CloudFront viewer-request Function is attached by default using the
+        ``lps_by_uri`` template (the canonical landing-page router that gates
+        traffic by country/ttclid/UA and rewrites blacklisted requests to a
+        safe page). Pass ``enable_viewer_request=False`` to skip, or override
+        ``routing_type`` / ``viewer_request_function_code`` for other routers
+        (geo, ab, utm, ip, device, path, composite).
         """
         print(f"[DeploymentManager] deploy_static_domain: domain={domain_name} "
               f"s3_website_url={s3_website_url} purchase_domain={purchase_domain} "
@@ -148,7 +150,7 @@ class DeploymentManager:
         if enable_viewer_request:
             fn_name = viewer_request_function_name or self._viewer_request_function_name(domain_name)
             fn_code = viewer_request_function_code or build_function_code(
-                routing_type or 'geo', routing_config
+                routing_type or 'lps_by_uri', routing_config
             )
             print(f"[DeploymentManager] deploy_static_domain: "
                   f"creating/reusing CF function name={fn_name}")

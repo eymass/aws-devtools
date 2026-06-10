@@ -215,10 +215,11 @@ class DeployStaticSchema(Schema):
         },
     )
     enable_viewer_request = fields.Bool(
-        load_default=False,
+        load_default=True,
         metadata={
             "description": "Attach a CloudFront Function for viewer-request routing logic. "
-                           "Requires routing_type or viewer_request_function_code.",
+                           "Defaults to true; the lps_by_uri template is used unless "
+                           "routing_type or viewer_request_function_code overrides it.",
             "example": True,
         },
     )
@@ -227,9 +228,9 @@ class DeployStaticSchema(Schema):
         validate=validate.OneOf(ROUTING_TYPES),
         metadata={
             "description": "Built-in routing template to apply when enable_viewer_request=true. "
-                           "One of: geo, ab, utm, ip, device, path, composite. "
-                           "Mutually exclusive with viewer_request_function_code.",
-            "example": "geo",
+                           "One of: lps_by_uri (default), geo, ab, utm, ip, device, path, "
+                           "composite. Mutually exclusive with viewer_request_function_code.",
+            "example": "lps_by_uri",
         },
     )
     viewer_request_function_code = fields.Str(
