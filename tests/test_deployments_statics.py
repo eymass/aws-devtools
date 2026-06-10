@@ -29,6 +29,12 @@ def test_normalize_s3_website_domain_rejects_empty(raw):
         DeploymentStatics.normalize_s3_website_domain(raw)
 
 
+@pytest.mark.parametrize("raw", ["my-bucket", "http://my-bucket", "http://my-bucket/"])
+def test_normalize_s3_website_domain_rejects_single_label_hostname(raw):
+    with pytest.raises(ValueError, match="single-label hostname"):
+        DeploymentStatics.normalize_s3_website_domain(raw)
+
+
 def test_get_s3_website_origins_uses_bare_host_for_id_and_domain_name():
     origins = DeploymentStatics.get_s3_website_origins(f"http://{HOST}/")
     assert len(origins) == 1
@@ -41,3 +47,17 @@ def test_default_cache_behavior_target_origin_id_matches_origin_id():
     origins = DeploymentStatics.get_s3_website_origins(raw)
     behavior = DeploymentStatics.get_s3_optimized_default_cache_behavior(raw)
     assert behavior["TargetOriginId"] == origins[0]["Id"]
+
+
+def test_normalize_s3_website_domain_strips_fallback_resolved_url_with_lp_key():
+    # Mirrors the fallback construction used when no explicit s3_website_url is given:
+    #   resolved_url = s3_website_url or (
+    #       f"http://{bucket_name}.s3-website-{region}.amazonaws.com/{lp_key}/"
+    #   )
+    bucket_name = "my-bucket"
+    region = "us-east-1"
+    lp_key = "Summer-sale"
+    resolved_url = (
+        f"http://{bucket_name}.s3-website-{region}.amazonaws.com/{lp_key}/"
+    )
+    assert DeploymentStatics.normalize_s3_website_domain(resolved_url) == HOST

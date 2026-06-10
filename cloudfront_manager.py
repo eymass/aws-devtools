@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 import time
+import json
 
 
 class CloudFrontManager:
@@ -116,6 +117,11 @@ class CloudFrontManager:
             if is_s3_origin:
                 distribution_config['DefaultRootObject'] = 'index.html'
 
+            # Debug: dump the full outgoing request body before sending it to CloudFront
+            print(
+                f"create_distribution request body for {domain_name}:\n"
+                f"{json.dumps(distribution_config, indent=2, default=str)}"
+            )
             response = self.client.create_distribution(DistributionConfig=distribution_config)
             distribution_id = response['Distribution']['Id']
             distribution_domain_name = response['Distribution']['DomainName']

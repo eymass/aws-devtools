@@ -25,6 +25,12 @@ class DeploymentStatics:
         host = urlparse(candidate).hostname
         if not host:
             raise ValueError(f"Could not parse domain from s3_website_url: {s3_website_url!r}")
+        if '.' not in host:
+            raise ValueError(
+                f"s3_website_url resolved to a single-label hostname {host!r}, which is not a "
+                f"valid CloudFront origin domain. Pass the full S3 website endpoint, e.g. "
+                f"{host}.s3-website-us-east-1.amazonaws.com"
+            )
         return host
 
     @staticmethod
